@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+# Takes a directory and moves all subdir files up to root dir with renaming
+# such that subdirs are prepended to filename.
+# ex: "rootDir/subdir0/subdir1/subdir2/filename.ext" ->
+# "rootDir/[subdir0] [subdir1] [subdir2] filename.ext"
+__author__ = 'mkal'
+import os
+import sys
+import shutil
+import argparse
+
+# @TODO: add param package so params can be added:
+# [ schar, echar, ... ]
+
+# set our globals
+yMove = True
+rDir  = os.getcwd()
+fdf_g_sChar = '['
+fdf_g_eChar = ']'
+fdf_g_dbgEn = False
+
+def dbg( msg ):
+    if ( fdf_g_dbgEn ):
+        print( msg )
+
+def makePrefix( dir ):
+    return fdf_g_sChar + dir + fdf_g_eChar
+
+def _getFiles( prefix, dir ):
+    # get the new prefix based on this dir
+    files = []
+    prefixStr = ''
+    if ( os.path.abspath(dir) != rDir ):
+        prefixStr = makePrefix( os.path.basename( dir ) )
+        if ( len( prefix ) ):
+            prefixStr = prefix + ' ' + prefixStr
+
+    # get all entries to this dir
+    for e in os.listdir(dir):
+        path = os.path.abspath( os.path.join(dir,e) )
+        if ( os.path.isdir( path ) ):
+            # need to recurse down to grab those files as well
+            dbg( "_getFiles( " + prefixStr + ", " + path + " )" )
+            tmpFiles = _getFiles( prefixStr, path )
+            for fTuple in tmpFiles:
+                files.append( fTuple )
+        else:
+            # don't need to head down south, so build the move paths
+            newName = e
+            if ( len(prefixStr) != 0 ):
+                newName = prefixStr + ' ' + newName
+            # setup the move
+            oldPath = os.path.abspath(path)
+            newPath = os.path.abspath( os.path.join( rDir, newName) )
+            dbg( oldPath + ' -> ' +  newPath )
+            if ( oldPath != newPath ):
+                files.append( ( oldPath, newPath ) )
+
+    # return resultscd
+    return files
+
+def getFiles( rDir ):
+    # returns array of ( fullName.ext, prependedName.ext )
+    # [ ( "c:\dir\subdir0\subdir1\name.mp3", "[subdir0] [subdir1] name.mp3" ), ... ]
+    # this is just the wrapper for the recursive search/builder function
+    dbg( rDir )
+    fileList = _getFiles( '', rDir )
+
+    return fileList
+
+def moveFiles( fileTuples ):
+    for fTuple in fileTuples:
+        shutil.move( fTuple[0], fTuple[1] )
+
+def main ():
+    # do the deeds
+    files = getFiles( rDir )
+
+    # check if we should move them or not
+    if ( yMove ):
+        # do move
+        print( "Moving {0} files".format( len(files) ) )
+        moveFiles( files )
+    else:
+        # just print
+        print( files )
+
+# do the dance and make it rain a flatten file struct
+main()
